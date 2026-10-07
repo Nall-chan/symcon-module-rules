@@ -25,7 +25,6 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Nutze sinnvolle Vererbung der Klassen um Code-Duplikate zu vermeiden.
   - Nutze die globale Helper Klassen, welche per eval in den jeweiligen Namensraum des Moduls geladen werden, um die Funktionalität zu erweitern und sich nicht gegenseitig zu stören. Diese Helper-Klassen sind nicht veränderbar und liegen als Submodul unter `/libs/helper`.  Verwende zum laden der Helper-Klassen folgendes Schema (Beispiel DebugHelper): `eval('declare(strict_types=1);namespace <HIER_DEN_MODUL_NAMESPACE_EINTRAGEN> {?>' . file_get_contents(dirname(__DIR__) . '/libs/helper/DebugHelper.php') . '}');`.
   - Fehlen die Helper-Klassen, so müssen sie per Kommandozeile und mit git geclont werden (als Submodule, Branch `strict` ). Nur dann ist die Quelle `https://github.com/Nall-chan/SymconModulHelper` zu nutzen. Die Helper-Klassen sind nicht Bestandteil der Library und werden nur als Hilfsmittel genutzt, um die Entwicklung zu vereinfachen.
-  - Bei Modulübergreifenden Konstanten sollten diese in einer eigenen Datei und Klasse definiert werden.
 - **Dateistruktur:**
   - Der Aufbau ist hier genauer beschrieben: `https://www.symcon.de/de/llms/developer/sdk-tools/sdk-php.md`
   - `module.json`: Modul-Metadaten (GUIDs, Name, Typ).
@@ -35,25 +34,35 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
 - **Lebenszyklus-Methoden:**
   - Der Aufbau ist hier genauer beschrieben: `https://www.symcon.de/de/llms/developer/sdk-tools/sdk-php/module.md`
   - `Create()`: Properties mit `$this->RegisterPropertyString(...)` etc. registrieren. Timer und Attribute registrieren. Buffer initialisieren.
-  - `ApplyChanges()`: Einstellungen anwenden, Timer & Messages registrieren. Eventuell die Verbindung zu einem Gerät aufbauen. Status setzen. Statusvariablen anlegen.
+  - `ApplyChanges()`: Einstellungen anwenden, Timer & Messages registrieren. Eventuell die Verbindung zu einem Gerät aufbauen. Status setzen. Statusvariablen anlegen. Buffer initialisieren.
+  - **Buffer:** Laufzeitzustand wird über den BufferHelper (`/libs/helper/BufferHelper.php`) als Eigenschaft der Klasse gehalten (`$this->Name = ...`), nicht über `GetBuffer`/`SetBuffer` direkt. Jede Eigenschaft im Klassen-Docblock als `@property <typ> $Name` deklarieren und in `Create()` **und** `ApplyChanges()` initialisieren (`= []`, `= 0`, `= ''`). Arrays und Objekte werden serialisiert gespeichert, kein `json_encode` nötig.
 - **Konventionen:**
   - Nutze `$this->SendDebug('Headline', 'Data', 0)` für Logging.
-  - Nutze `$this->SetStatus(...)` für Modulzustände (z. B. 102 = Aktiv, 201 = Fehler).
-  - Nutze keine IPS_ Funktionen direkt, sondern die Methoden der IPSModuleStrict-Klasse, außer es existiert keine entsprechende Methode.
+  - Nutze `$this->SetStatus(...)` für Modulzustände (z. B. 102 = Aktiv; Werte ab 200 aufwärts sind verschiedene Fehlerzustände, z. B. `IS_EBASE + 1`).
+  - Nutze keine IPS_ Funktionen direkt, sondern die Methoden der IPSModuleStrict-Klasse, außer es existiert keine entsprechende Methode. Ausnahmen sind z. B. Systeminformationen per `IPS_GetSystemLanguage()` oder `IPS_GetKernelDir()`.
   - Sandboxing: Zugriff auf Symcon Objekte außerhalb der eigenen Modulinstanz ist nur lesend erlaubt, Ausnahme ist das Schalten von Variablen mit RequestAction.
   - Nutze anständige Namenskonventionen für Variablen, Methoden und Klassen.
   - Deklariere wiederkehrende Strings als Konstanten, um Tippfehler zu vermeiden.
   - Wahrung der Hoheit des Nutzers: Die Module sollen so entwickelt werden, dass der Nutzer die volle Kontrolle über die Konfiguration und Nutzung der Module hat. Es sollten keine versteckten Funktionen oder Abhängigkeiten implementiert werden, die den Nutzer einschränken oder die Nutzung der Module behindern. Ebenso dürfen keine Objektnamen (auch Symcon Statusvariablen sind Objekte) ohne Zustimmung des Nutzers geändert werden.
   - Sollen Objekte aus dem Symcon Objektbaum gelöscht werden, so muss der Nutzer dies explizit bestätigen bzw. vorher darauf hingewiesen werden. Das gilt für den Modulcode ebenso wie für deine eigenen Aktionen über den MCP-Server.
+  - **Sensible Daten:** Schlüsselmaterial, Passwörter, WLAN-Zugangsdaten und Tokens nie im Klartext per `SendDebug` ausgeben (maskieren, ggf. nur die Länge). Funktionen, die solche Daten setzen oder auslesen, nur umsetzen, wenn sie einen klaren Mehrwert haben, sonst in den Backlog.
+  - **Fremdquellen:** Werden Code, Tabellen oder Protokolldetails aus anderen Projekten übernommen, Lizenz prüfen und Quelle samt Copyright im Dateikopf und in der README nennen.
+- **Statusvariablen:**
+  - Der Name einer Statusvariable beschreibt genau ihren Inhalt (z. B. Zähler vs. aktueller Zustand).
+  - Übersetzungen in `locale.json` eintragen und das Modul neu laden, **bevor** neue Variablen live angelegt werden. Ein Modul benennt bestehende Variablen nie selbst um; Namensänderungen kommen mit Hinweis in den Changelog.
+  - Nur Darstellungsparameter verwenden, die die gewählte Darstellung für den Variablentyp kennt (prüfen mit `IPS_GetPresentation`, Gruppen je Variablentyp). Fehler fallen erst auf, wenn sich die Darstellung ändert. Neue oder geänderte Darstellungen daher mit einer neu angelegten Variable testen.
+  - Skalierung und Einheit jedes Rohwerts belegen: Referenzimplementierung, Herstellerdoku oder Plausibilitätsrechnung mit Live-Werten. Annahmen im Code-Kommentar und in `STATUS.md` kennzeichnen.
+  - Liefert ein Gerät einen Wert nicht mit, darf er nicht als 0 oder Fehler gewertet werden, wenn das Protokoll „fehlt“ und „0“ nicht unterscheidet (z. B. Protobuf proto3). Wertvariablen behalten dann ihren letzten Wert. Status- und Alarmvariablen gehen erst nach mehreren Abfragen in Folge ohne Wert auf Alarm.
 - **Namenskonventionen:**
   - Klassenname = Modulname (z. B. `MyModule`).
   - Methoden in CamelCase (z. B. `GetStatus()`).
   - Variablen in CamelCase (z. B. `$myVariable`).
-  - Konstanten in UPPER_CASE (z. B. `MY_CONSTANT`).
+  - Klassenkonstanten in CamelCase (z. B. `public const PowerLimit = 'pLim';`). Konstanten werden thematisch in eigenen Klassen gruppiert (z. B. `Property`, `Variables`, `Timer`, `Attribute`, `Locks`), bei modulübergreifender Nutzung in einer gemeinsamen Datei unter `/libs`.
 - **Dokumentation:**
   - Nutze PHPDoc für Klassen, Methoden und Variablen.
   - Beschreibe die Funktionalität und Parameter der Methoden.
   - Dokumentiere die Modulkonfiguration im form.json.
+  - Feste Breiten (`width`) im form.json an der längsten Übersetzung ausrichten. Deutsche Texte sind meist länger als die englischen Originale.
   - Erstelle im Hauptordner eine README.md mit einer Anwenderbeschreibung der Library und dessen Bestandteile.
   - Der Aufbau der README.md sollte wie folgt aussehen:
     - **1. Funktionsumfang**
@@ -111,7 +120,9 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Nutze sinnvolle Kommentare, um den Code verständlich zu machen.
   - Als Style für PHP-CS-Fixer wird die unter `./.style` vorhandene Konfiguration verwendet, welche als [Submodule](https://github.com/Nall-chan/StylePHP) eingebunden wird.
   - Nutze den im Ordner `./.style` vorhanden Stil für die Codeformatierung. Die Ausführung erfolgt über die Tasks in Visual Studio Code, welche in `.vscode/tasks.json` als `CS-Fixer (fix)` und `CS-Fixer (check)` vorhanden sind. Außerhalb von VS Code den in diesen Tasks hinterlegten Befehl direkt im Terminal ausführen.
+  - Vor **jedem** Commit PHP-CS-Fixer im Check-Modus über alle geänderten PHP-Dateien laufen lassen; der GitHub-Check (`action-style@strict`) ist maßgeblich. Fehlt `.style/.php-cs-fixer.php`, das Submodul aktualisieren (`git submodule update --init -- .style`). Unter Windows auf UNC-Pfaden meldet der Fixer Dateien mit CRLF-Zeilenenden fälschlich; das ist kein Fehler im Repo.
   - Schreibe Unit-Tests für die Module, um die Funktionalität zu gewährleisten (im Ordner `./tests`, Symcon-Stubs als Submodul unter `./tests/stubs`).
+  - Protokoll-Code (Parser, Encoder, Verschlüsselung) ohne Symcon-Abhängigkeit in lib-Klassen halten und mit Referenzvektoren aus anderen Implementierungen oder echten Mitschnitten testen.
   - Entsprechende Tasks sind in Visual Studio Code vorhanden, durch den Einsatz eines [Submodul unter `./.vscode`](https://github.com/Nall-chan/SymconVSCTasks.git)
 - **Allgemeine Anforderungen an eine Library**
   - Die Instanzen sollen vom User einfach eingerichtet werden können, ohne dass tiefgehende Programmierkenntnisse erforderlich sind.
@@ -129,14 +140,19 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Folgeanfragen nach einem fehlgeschlagenen Verbindungsaufbau unterlassen, damit keine Doppelmeldungen entstehen.
   - Jede Fehlermeldung mit `$this->Translate()` ausgeben und in `locale.json` übersetzen.
   - Ungültige Parameterkombinationen in öffentlichen Funktionen vor dem Senden abfangen und melden.
+  - Wertebereiche von Stellwerten aus Gerätedoku oder Referenzimplementierung übernehmen (z. B. Leistungslimit 2–100 %), nicht aus der Darstellung der Variable.
+  - Fehler bei optionalen Zusatzabfragen (z. B. Diagnosedaten, die nicht jedes Gerät oder jede Firmware unterstützt) nur per `SendDebug` ausgeben. Sie ändern weder den Instanzstatus noch erzeugen sie Log-Meldungen.
 - **Allgemeine Anforderungen an die Module**
   - Discovery und Konfigurator-Instanzen erzeugen Output für ein Configurator-Element. Diese Instanzen müssen GetConfigurationForm() so implementieren, dass die Ergebnisse (suche Geräte und gleiche mit vorhandenen Instanzen in Symcon ab) im Configurator Element korrekt im Feld Values als Tabelle dargestellt werden.
 
 ## Arbeitsabläufe
 
 - **Live-Dateien:** Die Moduldateien liegen direkt im Modulverzeichnis von Symcon und sind sofort aktiv. Voneinander abhängige Änderungen (z.B. neue Konstante in einer lib-Datei und deren Nutzung in `module.php`) erst vollständig vorbereiten und dann in einem Schritt schreiben, die definierende Datei zuerst. Danach `php -l` und, wenn nötig, `module_reload` über den MCP-Server.
-- **Live-Tests:** Instanzfunktionen über `symcon_call` bzw. `IPS_RunScriptTextWait` aufrufen (Rückgabewert per `var_dump`, Statusvariablen per `GetValueFormatted` prüfen). Debug-Ausgaben mit `IPS_EnableDebug(ID, Sekunden)` aktivieren und mit `symcon_debug` lesen. Tests mit Geräten nur auf den in `CLAUDE.md`/`CLAUDE.local.md` freigegebenen Testinstanzen.
+- **Live-Tests:** Instanzfunktionen über `symcon_call` bzw. `IPS_RunScriptTextWait` aufrufen (Rückgabewert per `var_dump`, Statusvariablen per `GetValueFormatted` prüfen). `symcon_call` ist nicht in jeder Server-Version verfügbar; `IPS_RunScriptTextWait` benötigt eine Erlaubnisregel in den Claude-Code-Einstellungen (nicht in Symcon). Debug-Ausgaben mit `IPS_EnableDebug(ID, Sekunden)` aktivieren und mit `symcon_debug` lesen. Tests mit Geräten nur auf den in `CLAUDE.md`/`CLAUDE.local.md` freigegebenen Testinstanzen.
 - **Prüfung vor Abschluss:** `php -l`, PHP-CS-Fixer (Konfiguration `./.style`, Option `--allow-risky=yes`), JSON-Dateien (`locale.json`, `form.json`) auf Gültigkeit prüfen, Unit-Tests ausführen.
+- **Modul neu laden:** `module_reload` verbindet alle Instanzen neu. Verbindungsfehler direkt während des Reloads (z. B. Zeitüberschreitung, nicht erreichbares Gerät) sind keine Codefehler; danach Log und Debug der nächsten Zyklen prüfen.
+- **Versionierung:** Jede veröffentlichte Version erhält eine neue Versionsnummer (`library.json`: `version`, `build`, `date`) und einen eigenen Changelog-Abschnitt. Eine bereits im Store veröffentlichte Version wird nicht nachträglich geändert.
+- **Testdaten von Nutzern:** Debug-Logs, Mitschnitte und Screenshots von Nutzern enthalten oft Seriennummern oder Netzwerkdaten. Nie einchecken (per `.gitignore` ausschließen) und in `STATUS.md` nur anonymisiert zitieren.
 - Commits nur auf ausdrücklichen Wunsch des Nutzers.
 
 ## Arbeitsstand pflegen
