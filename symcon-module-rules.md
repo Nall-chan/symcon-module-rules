@@ -39,7 +39,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
 - **Konventionen:**
   - Nutze `$this->SendDebug('Headline', 'Data', 0)` für Logging.
   - Nutze `$this->SetStatus(...)` für Modulzustände (z. B. 102 = Aktiv; Werte ab 200 aufwärts sind verschiedene Fehlerzustände, z. B. `IS_EBASE + 1`).
-  - Nutze keine IPS_ Funktionen direkt, sondern die Methoden der IPSModuleStrict-Klasse, außer es existiert keine entsprechende Methode. Ausnahmen sind z. B. Systeminformationen per `IPS_GetSystemLanguage()` oder `IPS_GetKernelDir()`.
+  - Nutze keine IPS_ Funktionen direkt, sondern die Methoden der IPSModuleStrict-Klasse, außer es existiert keine entsprechende Methode. Ausnahmen sind z. B. Systeminformationen per `IPS_GetSystemLanguage()` oder `IPS_GetKernelDir()` sowie das Lesen fremder Instanzen in Konfigurator und Discovery (`IPS_GetInstance`, `IPS_GetInstanceListByModuleID`). Statt `IPS_Sleep` PHPs `usleep` verwenden.
   - Sandboxing: Zugriff auf Symcon Objekte außerhalb der eigenen Modulinstanz ist nur lesend erlaubt, Ausnahme ist das Schalten von Variablen mit RequestAction.
   - Nutze anständige Namenskonventionen für Variablen, Methoden und Klassen.
   - Deklariere wiederkehrende Strings als Konstanten, um Tippfehler zu vermeiden.
@@ -50,6 +50,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
 - **Statusvariablen:**
   - Der Name einer Statusvariable beschreibt genau ihren Inhalt (z. B. Zähler vs. aktueller Zustand).
   - Übersetzungen in `locale.json` eintragen und das Modul neu laden, **bevor** neue Variablen live angelegt werden. Ein Modul benennt bestehende Variablen nie selbst um; Namensänderungen kommen mit Hinweis in den Changelog.
+  - Parameternamen unterscheiden sich je Darstellung, auch innerhalb von `OPTIONS` (z. B. Aufzählung `Color`, Wertanzeige `ColorActive`/`ColorValue`). `MULTILINE` gibt es nur bei Strings. Bei vielen Variablendefinitionen die Parameterlisten aus `IPS_GetPresentation` als JSON unter `tests/` ablegen und alle Definitionen per Unit-Test dagegen prüfen, ebenso, ob jede Beschriftung übersetzt ist.
   - Nur Darstellungsparameter verwenden, die die gewählte Darstellung für den Variablentyp kennt (prüfen mit `IPS_GetPresentation`, Gruppen je Variablentyp). Fehler fallen erst auf, wenn sich die Darstellung ändert. Neue oder geänderte Darstellungen daher mit einer neu angelegten Variable testen.
   - Skalierung und Einheit jedes Rohwerts belegen: Referenzimplementierung, Herstellerdoku oder Plausibilitätsrechnung mit Live-Werten. Annahmen im Code-Kommentar und in `STATUS.md` kennzeichnen.
   - Liefert ein Gerät einen Wert nicht mit, darf er nicht als 0 oder Fehler gewertet werden, wenn das Protokoll „fehlt“ und „0“ nicht unterscheidet (z. B. Protobuf proto3). Wertvariablen behalten dann ihren letzten Wert. Status- und Alarmvariablen gehen erst nach mehreren Abfragen in Folge ohne Wert auf Alarm.
@@ -121,7 +122,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
     - Nicht zum Modul gehörende Objekte unterhalb der Instanz (Testvariablen, Skripte des Nutzers) vor der Aufnahme nach Rückfrage ausblenden (`IPS_SetHidden`), nicht löschen.
     - `symcon_tile_preview` kann das nicht: es nimmt nur Variablen an. Stattdessen die echte Kachel-Visualisierung (`http://127.0.0.1:3777/tile/`) verwenden. Sie zeigt nur Objekte unterhalb ihrer Basis-Kategorie und kennt keine Direktlinks (die URL ändert sich beim Navigieren nicht). Daher eine Testkategorie unterhalb der Basis anlegen (nach Rückfrage; IDs in `CLAUDE.local.md`) und darin **einen** Link, der nacheinander per `IPS_SetLinkTargetID` auf die Instanzen zeigt und per `IPS_SetName` den Instanznamen bekommt. Größe und Position der Kachel gehören zum Link und bleiben so erhalten.
     - Aufnahme mit `.claude-rules/tools/tile-screenshot.mjs` (Node ≥ 22, Edge headless über das DevTools-Protokoll): Seite laden (`wait:15000`), Kategorie-Schaltfläche klicken, Kachel maximieren, `shot`. Breite immer 1174 px. Mit Höhe 800 navigieren (bei anderer Höhe verschieben sich die Schaltflächen der Startseite) und erst vor dem Maximieren per `size:1174,3000` vergrößern. Danach `.claude-rules/tools/crop-dialog.ps1` schneidet den Dialog auf den Inhalt zu. Koordinaten vorher mit einem `shot` ermitteln. Vor der Aufnahme die Maus wegbewegen (`move`), sonst ist ein Symbol hervorgehoben. Ausgabepfad ohne Leerzeichen, danach in den Modulordner kopieren.
-  - **Screenshots WebFront** (`imgs/webfront.png`, unter „WebFront Visualisierung“): ein eigenes WebFront für Screenshots mit derselben Basis-Kategorie wie die Kachel-Visualisierung nutzen (IDs in `CLAUDE.local.md`), dann gelten dieselben Links. Aufruf `http://127.0.0.1:3777/#<WebFront-ID>` (der Hash wählt nur das WebFront, Unterseiten per Mausklick auf den Reiter), Breite ca. 700 px, Aufnahme mit `shotel:<Name>:<Titel>` (Rahmen `.ipsInstance` mit diesem Titel).
+  - **Screenshots WebFront** (`imgs/webfront.png`, unter „WebFront Visualisierung“): ein eigenes WebFront für Screenshots mit derselben Basis-Kategorie wie die Kachel-Visualisierung nutzen (IDs in `CLAUDE.local.md`), dann gelten dieselben Links. Aufruf `http://127.0.0.1:3777/#<WebFront-ID>` (der Hash wählt nur das WebFront, Unterseiten per Mausklick auf den Reiter, ein JavaScript-`click()` wechselt nicht; passen nicht alle Reiter in die Breite, erst über die Pfeile in der Reiterleiste weiterblättern), Breite ca. 700 px, Aufnahme mit `shotel:<Name>:<Titel>` (Rahmen `.ipsInstance` mit diesem Titel).
   - **Screenshots Konfiguration** (`imgs/config.png`, unter „4. Einrichten der Instanzen“): Die Konsole (`http://127.0.0.1:3777/console/`) ist lokal ohne Anmeldung erreichbar. Objektbaum öffnen, ID-Suche, Instanz-ID eingeben und Enter öffnet direkt die Instanzkonfiguration. `.claude-rules/tools/crop-config.ps1` schneidet von der Statuszeile bis zum Trennbalken vor den Aktionen; bei schmalen Formularen rechts auf ca. 500 px kürzen. Dabei auf Umbrüche achten (Breite im `form.json` an der längsten Übersetzung ausrichten).
   - **Headless-Browser:** Edge gibt beim Beenden nicht alle Kindprozesse frei. Bleiben Prozesse mit dem Profil hängen, verbindet sich der nächste Lauf ggf. mit dem alten Browser (falsche Seite, z.B. Konsole statt WebFront). Das Skript beendet deshalb am Ende alle Edge-Prozesse mit seinem Profilpfad und nutzt einen zufälligen Debug-Port, damit parallele Sitzungen nicht kollidieren.
     - Jedes Bild vor dem Einbinden ansehen. Die Bilder zeigen echte Werte; vorher mit dem Nutzer klären, ob sensible Werte (Passwörter, externe IPs, Seriennummern, Namen) enthalten sein dürfen. Freigegebene Maskierung (z.B. rote Balken über Namen und Rufnummern ab der dritten Ziffer) in allen Bildern derselben Daten gleich anwenden.
@@ -129,16 +130,21 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Jede für Nutzer sichtbare Änderung erhält einen Eintrag im Changelog der Haupt-README.
   - **Aufbau eines Changelog-Abschnitts** (gruppiert, damit er im Forum schnell lesbar ist):
     1. Hinweisbox `> [!IMPORTANT]` mit allem, was Nutzer beim Update beachten müssen (geänderte Voraussetzungen, umbenannte Funktionen, geändertes Verhalten). Bis zum Release in `STATUS.md` sammeln.
-    2. **Neue Funktionen und Aktionen**: pro Instanz (Modul) eine Zeile mit allen neuen Funktionen.
-    3. **Änderungen**: Interna wie Migrationen nur allgemein („werden beim Update übernommen“).
-    4. **Behobene falsche Werte in Statusvariablen**: falsche Werte bzw. Wertzuweisungen aufzählen.
-    5. **Fehlerbehebungen** am Ende.
-  - Rein organisatorische Änderungen (Lizenz, Doku-Umbau, Repo-Struktur) gehören nicht in den Changelog.
+    2. **Neue Module**: je Modul eine Zeile mit Link zur Modul-README und kurzer Funktionsbeschreibung.
+    3. **Neue Funktionen und Aktionen**: pro Instanz (Modul) eine Zeile mit allen neuen Funktionen.
+    4. **Neue Statusvariablen**: pro Gerät bzw. Instanz eine Zeile.
+    5. **Geändertes Verhalten**: z. B. neue Statuscodes, andere Darstellung, automatisches Neuverbinden. Interna wie Migrationen nur allgemein („werden beim Update übernommen“).
+    6. **Behobene falsche Werte in Statusvariablen**: falsche Werte bzw. Wertzuweisungen aufzählen.
+    7. **Fehlerbehebungen** am Ende.
+  - Gruppen als fette Zeile, leere Gruppen entfallen. Bei wenigen Einträgen darf eine Version auch eine einfache Liste bleiben.
+  - Einträge beschreiben die Wirkung für den Nutzer, nicht den Code. Einzelne neue Werte einer Aufzählung nicht als eigene Zeile („Geschirrspüler: Betriebszustand `Bereit`“), sondern zusammengefasst als behobener Wert („Zustände, die der Controller meldet, wurden teilweise nicht angezeigt“) oder weglassen.
+  - Rein organisatorische und interne Änderungen gehören nicht in den Changelog: Lizenz, Doku-Umbau, Repo-Struktur, Unit-Tests, Refactoring und Protokolldetails ohne sichtbare Wirkung (z. B. ein zusätzlich gesendeter Header).
 - **Code-Qualität:**
   - Vermeide unnötige Abhängigkeiten und externe Bibliotheken, außer es ist zwingend notwendig.
   - Nutze sinnvolle Kommentare, um den Code verständlich zu machen.
   - Als Style für PHP-CS-Fixer wird die unter `./.style` vorhandene Konfiguration verwendet, welche als [Submodule](https://github.com/Nall-chan/StylePHP) eingebunden wird.
   - Nutze den im Ordner `./.style` vorhanden Stil für die Codeformatierung. Die Ausführung erfolgt über die Tasks in Visual Studio Code, welche in `.vscode/tasks.json` als `CS-Fixer (fix)` und `CS-Fixer (check)` vorhanden sind. Außerhalb von VS Code den in diesen Tasks hinterlegten Befehl direkt im Terminal ausführen.
+  - PHP-CS-Fixer (auch `fix`) nur mit einzelnen Dateinamen aufrufen, nie auf ein Verzeichnis wie `libs/`: sonst ändert er die Submodule (`libs/helper`). Versehentliche Änderungen dort mit `git -C libs/helper checkout -- .` zurücknehmen.
   - Vor **jedem** Commit PHP-CS-Fixer im Check-Modus über alle geänderten PHP-Dateien laufen lassen; der GitHub-Check (`action-style@strict`) ist maßgeblich. Fehlt `.style/.php-cs-fixer.php`, das Submodul aktualisieren (`git submodule update --init -- .style`). Unter Windows auf UNC-Pfaden meldet der Fixer Dateien mit CRLF-Zeilenenden fälschlich; das ist kein Fehler im Repo.
   - Schreibe Unit-Tests für die Module, um die Funktionalität zu gewährleisten (im Ordner `./tests`, Symcon-Stubs als Submodul unter `./tests/stubs`).
   - Protokoll-Code (Parser, Encoder, Verschlüsselung) ohne Symcon-Abhängigkeit in lib-Klassen halten und mit Referenzvektoren aus anderen Implementierungen oder echten Mitschnitten testen.
@@ -168,6 +174,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
 
 ## Arbeitsabläufe
 
+- **Textersetzungen per Skript:** Das Zeilenende der Datei übernehmen (Repos enthalten oft CRLF und LF gemischt), sonst passen Suchmuster nicht und Diffs werden unlesbar. In READMEs die zwei Leerzeichen am Zeilenende (harter Umbruch, z. B. in Changelog-Listen) erhalten. Texte mit Backslashes nicht über Shell-Heredocs mit Ersetzung schreiben.
 - **Live-Dateien:** Die Moduldateien liegen direkt im Modulverzeichnis von Symcon und sind sofort aktiv. Voneinander abhängige Änderungen (z.B. neue Konstante in einer lib-Datei und deren Nutzung in `module.php`) erst vollständig vorbereiten und dann in einem Schritt schreiben, die definierende Datei zuerst. Danach `php -l` und, wenn nötig, `module_reload` über den MCP-Server.
 - **Live-Tests:** Instanzfunktionen über `symcon_call` bzw. `IPS_RunScriptTextWait` aufrufen (Rückgabewert per `var_dump`, Statusvariablen per `GetValueFormatted` prüfen). `symcon_call` ist nicht in jeder Server-Version verfügbar; `IPS_RunScriptTextWait` benötigt eine Erlaubnisregel in den Claude-Code-Einstellungen (nicht in Symcon). Debug-Ausgaben mit `IPS_EnableDebug(ID, Sekunden)` aktivieren und mit `symcon_debug` lesen. Tests mit Geräten nur auf den in `CLAUDE.md`/`CLAUDE.local.md` freigegebenen Testinstanzen.
 - **Prüfung vor Abschluss:** `php -l`, PHP-CS-Fixer (Konfiguration `./.style`, Option `--allow-risky=yes`), JSON-Dateien (`locale.json`, `form.json`) auf Gültigkeit prüfen, Unit-Tests ausführen.
