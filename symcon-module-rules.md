@@ -127,6 +127,13 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
     - Jedes Bild vor dem Einbinden ansehen. Die Bilder zeigen echte Werte; vorher mit dem Nutzer klären, ob sensible Werte (Passwörter, externe IPs, Seriennummern, Namen) enthalten sein dürfen. Freigegebene Maskierung (z.B. rote Balken über Namen und Rufnummern ab der dritten Ziffer) in allen Bildern derselben Daten gleich anwenden.
     - Beschreibungstext an das Bild angleichen (z. B. zeigen boolesche Variablen ohne Aktion einen An/Aus-Wert statt eines Schalters, HTML-Boxen und Bilder erscheinen in der Liste als Symbol zum Öffnen).
   - Jede für Nutzer sichtbare Änderung erhält einen Eintrag im Changelog der Haupt-README.
+  - **Aufbau eines Changelog-Abschnitts** (gruppiert, damit er im Forum schnell lesbar ist):
+    1. Hinweisbox `> [!IMPORTANT]` mit allem, was Nutzer beim Update beachten müssen (geänderte Voraussetzungen, umbenannte Funktionen, geändertes Verhalten). Bis zum Release in `STATUS.md` sammeln.
+    2. **Neue Funktionen und Aktionen**: pro Instanz (Modul) eine Zeile mit allen neuen Funktionen.
+    3. **Änderungen**: Interna wie Migrationen nur allgemein („werden beim Update übernommen“).
+    4. **Behobene falsche Werte in Statusvariablen**: falsche Werte bzw. Wertzuweisungen aufzählen.
+    5. **Fehlerbehebungen** am Ende.
+  - Rein organisatorische Änderungen (Lizenz, Doku-Umbau, Repo-Struktur) gehören nicht in den Changelog.
 - **Code-Qualität:**
   - Vermeide unnötige Abhängigkeiten und externe Bibliotheken, außer es ist zwingend notwendig.
   - Nutze sinnvolle Kommentare, um den Code verständlich zu machen.
@@ -146,8 +153,10 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Die Library sollte eine umfassende Dokumentation enthalten, um die Nutzung und Erweiterung der Module zu erleichtern.
 - **Fehlerbehandlung:**
   - Fehlermeldungen landen immer beim Aufrufer.
-  - Bei Bedienaktionen aus dem Frontend (`RequestAction` einer Statusvariable) wird der Fehler per `echo` ausgegeben, damit er dem Nutzer angezeigt wird.
-  - Bei allen anderen Aufrufern (Skripte, Timer, interne Abläufe) per `trigger_error(..., E_USER_NOTICE)` und Rückgabe `false`; interne Fehler landen so automatisch im Log.
+  - Fehler werden per `trigger_error(..., E_USER_NOTICE)` gemeldet und die Funktion gibt `false` zurück; interne Fehler landen so automatisch im Log. `E_USER_NOTICE` statt `E_USER_WARNING`, weil eine Notice das aufrufende Skript nicht abbricht.
+  - Bei Bedienaktionen aus dem Frontend (`RequestAction` einer Statusvariable) muss der Fehler dem Nutzer angezeigt werden. Dafür setzt `RequestAction` per `set_error_handler([$this, 'ModulErrorHandler'], E_USER_NOTICE | E_USER_WARNING)` einen Handler, der die Meldung per `echo` ausgibt, ruft den eigentlichen Action-Handler auf und stellt den Handler im `finally` wieder her. So bleibt es im Code einheitlich bei `trigger_error`.
+  - Symcon verwirft den Rückgabewert einer Instanz-Funktion, sobald sie eine Fehlermeldung erzeugt (auch `E_USER_NOTICE`); der Aufrufer erhält dann `false`. Hinweise, bei denen das Ergebnis trotzdem ankommen soll (z.B. veraltete Funktionsnamen), daher per `$this->LogMessage(..., KL_WARNING)` statt `trigger_error`.
+  - Rückgabewerte von Instanz-Funktionen sind auf 1 MB begrenzt („Output-Buffer exceeds Limit“, Rückgabe `false`). Große Listen nur seitenweise liefern (Funktionen mit Start/Anzahl) oder auf die nötigen Felder kürzen.
   - Jede Ausgabe (auch `echo`) in `ApplyChanges` wird von Symcon als Fehler gewertet. Das ist gewollt, wenn das Gerät nicht erreichbar ist: Für nicht dauerhaft erreichbare Geräte konfiguriert der Nutzer Watchdog/Bedingung.
   - Folgeanfragen nach einem fehlgeschlagenen Verbindungsaufbau unterlassen, damit keine Doppelmeldungen entstehen.
   - Jede Fehlermeldung mit `$this->Translate()` ausgeben und in `locale.json` übersetzen.
@@ -164,6 +173,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
 - **Prüfung vor Abschluss:** `php -l`, PHP-CS-Fixer (Konfiguration `./.style`, Option `--allow-risky=yes`), JSON-Dateien (`locale.json`, `form.json`) auf Gültigkeit prüfen, Unit-Tests ausführen.
 - **Modul neu laden:** `module_reload` verbindet alle Instanzen neu. Verbindungsfehler direkt während des Reloads (z. B. Zeitüberschreitung, nicht erreichbares Gerät) sind keine Codefehler; danach Log und Debug der nächsten Zyklen prüfen.
 - **Versionierung:** Jede veröffentlichte Version erhält eine neue Versionsnummer (`library.json`: `version`, `build`, `date`) und einen eigenen Changelog-Abschnitt. Eine bereits im Store veröffentlichte Version wird nicht nachträglich geändert.
+- **Umbenannte öffentliche Funktionen:** Der alte Name bleibt als Alias erhalten, ruft die neue Funktion auf und meldet per `LogMessage(..., KL_WARNING)`, in welcher Version er entfernt wird. Entfernt wird frühestens mit der nächsten Minor-Version (z.B. 3.10 → 3.20). Termin in `STATUS.md` vermerken.
 - **Testdaten von Nutzern:** Debug-Logs, Mitschnitte und Screenshots von Nutzern enthalten oft Seriennummern oder Netzwerkdaten. Nie einchecken (per `.gitignore` ausschließen) und in `STATUS.md` nur anonymisiert zitieren.
 - Commits nur auf ausdrücklichen Wunsch des Nutzers.
 
