@@ -188,3 +188,14 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
 
 - Lies zu Beginn einer Aufgabe `STATUS.md` im Hauptordner des Projekts.
 - Aktualisiere `STATUS.md`, wenn eine Aufgabe erledigt, eine Option verworfen (mit Begründung) oder eine neue offene Aufgabe erkannt wurde.
+
+## Sparsamer Umgang mit Kontext
+
+- **Debug lesen (`symcon_debug`):** Immer mit `contains` filtern (z. B. Befehl oder Meldungsname), `limit` klein halten und über `since` nur neue Einträge lesen. Rohe Statusmeldungen von Geräten nicht ungefiltert abrufen.
+- **Log (`symcon_log`):** Immer mit `sender_ids` der eigenen Instanzen bzw. `sender` und `types` filtern.
+- **Objektbaum (`symcon_tree`):** Bei Instanzen mit großen Variablen (HTML-Boxen, JSON) `values:false` verwenden; Werte gezielt per `GetValueFormatted` lesen.
+- **Suchen und Lesen:** Erst zählen (`grep -c`, `output_mode: count`), dann gezielt einzelne Stellen lesen. Große Dateien nur abschnittsweise lesen.
+- **Werkzeugausgaben kürzen:** PHPUnit, PHP-CS-Fixer und Skripte nur mit `| tail -n …` bzw. `grep` auf das Ergebnis ausgeben; CS-Fixer ohne `--diff`, außer der Diff wird gebraucht.
+- **Mehrzeilige Ersetzungen:** Nicht per `php -r`, Heredoc oder `sed` mit Backslashes, sondern über eine Skriptdatei im Scratchpad (Suchtext und Ersatz als Nowdoc). Das vermeidet Fehlversuche durch Shell-Quoting.
+- **STATUS.md schlank halten:** Sie wird bei jedem Sitzungsstart und nach jeder Änderung vollständig geladen. Erledigte Umsetzungsprotokolle nach dem Commit in `STATUS-Archiv.md` verschieben (nicht in CLAUDE.md eingebunden); in STATUS.md nur offene Punkte, Entscheidungen und Testhinweise behalten.
+- **Lange Live-Tests:** Abfragen in kurzen Schritten (unter ca. 60 s je Aufruf) statt einer langen Schleife, sonst bricht der MCP-Aufruf mit Timeout ab.
