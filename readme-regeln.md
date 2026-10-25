@@ -47,7 +47,7 @@ Ergänzung zu `symcon-module-rules.md`. Gilt, sobald PHPDoc, `form.json`-Doku, R
     - Kein Inhalt, der nur durch GitHub-spezifisches HTML/JavaScript funktioniert. Bilder und Links werden vom Browser als absolute Adressen kopiert und sind damit unkritisch.
   - Das Inhaltsverzeichnis (`<!-- omit in toc -->`) pflegt ein VS-Code-Plugin, aber nur wenn der Autor die Datei bearbeitet. Werden Überschriften hinzugefügt, umbenannt oder entfernt, das Inhaltsverzeichnis selbst passend anpassen.
   - Hinweisboxen ([Alerts](https://docs.github.com/de/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax), Abschnitt „Alerts“) sparsam und nur für wirklich wichtige Aussagen einsetzen, nie innerhalb von Listen oder Tabellen, mit Leerzeile davor und danach:
-    - `> [!NOTE]` Einschränkungen und Hintergrundinfos (z.B. „Wird nicht von allen Quellen unterstützt!“, Funktion aktuell nicht verfügbar).
+    - `> [!NOTE]` Einschränkungen und Hintergrundinfos (z.B. Funktion aktuell nicht verfügbar).
     - `> [!TIP]` Empfohlene Vorgehensweise (z.B. Instanzen über die Discovery anlegen).
     - `> [!IMPORTANT]` Pflichtvoraussetzungen und häufige Fehlbedienungen (z.B. erwartetes Werteformat, Erreichbarkeit ohne Anmeldung, kommerzielle Nutzung).
     - `> [!WARNING]` Gefahr von Fehlfunktionen oder Datenverlust (z.B. Löschen von Statusvariablen, Testphase der Library).
