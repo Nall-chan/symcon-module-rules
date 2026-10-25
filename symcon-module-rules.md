@@ -97,6 +97,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Fehler bei optionalen Zusatzabfragen (z. B. Diagnosedaten, die nicht jedes Gerät oder jede Firmware unterstützt) nur per `SendDebug` ausgeben. Sie ändern weder den Instanzstatus noch erzeugen sie Log-Meldungen.
 - **Allgemeine Anforderungen an die Module**
   - Discovery und Konfigurator-Instanzen erzeugen Output für ein Configurator-Element. Diese Instanzen müssen GetConfigurationForm() so implementieren, dass die Ergebnisse (suche Geräte und gleiche mit vorhandenen Instanzen in Symcon ab) im Configurator Element korrekt im Feld Values als Tabelle dargestellt werden.
+  - **Zusammenfassung (`SetSummary`):** Konfiguratoren, Splitter und IOs zeigen in der Zusammenfassung entweder ihren eigenen Host bzw. ihre eigene Schnittstelle (z. B. IP/Port, serieller Port) oder die des jeweiligen Parent an. Die Zusammenfassung ist nur eine Anzeige und keine Datenquelle (siehe Lebenszyklus-Methoden).
 
 ## Arbeitsabläufe
 
