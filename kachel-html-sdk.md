@@ -28,6 +28,14 @@ Ergänzung zu `symcon-module-rules.md`. Gilt für Module mit eigener HTML-Kachel
 
 Danach schließt ein einziges „Zurück“ den Dialog. Geprüft in Chrome: Kachel maximieren, in die Kachel klicken, Zurück. Referenzumsetzung: FritzBox, `libs/tile/tile.js`.
 
+## Fehlermeldungen der Visu über einer HTML-Kachel nicht bedienbar
+
+**Fehlerbild:** Erzeugt eine Bedienaktion der Kachel eine Fehlermeldung (rote Leiste unten, „Fehler bei …“), lässt sich die Meldung nicht schließen, solange die (maximierte) HTML-Kachel darunter liegt. Klicks auf „Mehr“ oder das X kommen nicht an.
+
+**Ursache:** Die Kachel-Visualisierung ist eine Flutter-Web-App und zeichnet ihre Oberfläche (auch die Fehlermeldung) in ein Canvas. Die HTML-Kachel ist ein echtes iframe darüber. Sichtbar liegt die Meldung oben, den Klick erhält aber das iframe (`document.elementFromPoint` an der Stelle des X liefert das iframe). In Chrome nachgestellt (2026-11-17, FritzBox Host Filter). Fehler der Kachel-Visualisierung, aus der Kachel nicht zu beheben (ein iframe kann Klicks nicht an die Flutter-Oberfläche weitergeben). Meldung an Symcon steht aus.
+
+**Umgang:** Fehler, die vorhersehbar sind, schon in der Kachel vermeiden (z. B. nicht zulässige Auswahl gar nicht anbieten), statt sie per Fehlermeldung zu melden. Abhilfe für Nutzer: Kachel verkleinern oder schließen.
+
 ## Kachel selbst maximiert öffnen und wieder schließen
 
 - Eine Kachel kann sich per `openObject(<eigene InstanzID>)` selbst maximiert öffnen (ab Symcon 8.2). Auslöser ist ein Ereignis der Instanz per `UpdateVisualizationValue`. Nur Clients, auf denen die Kachel gerade sichtbar ist, erhalten das Ereignis.
