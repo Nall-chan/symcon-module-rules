@@ -65,6 +65,7 @@ Das Symcon-System ist über den integrierten MCP-Server `symcon` angebunden (Sym
   - Methoden in CamelCase (z. B. `GetStatus()`).
   - Variablen in CamelCase (z. B. `$myVariable`).
   - Klassenkonstanten in CamelCase (z. B. `public const PowerLimit = 'pLim';`). Konstanten werden thematisch in eigenen Klassen gruppiert (z. B. `Property`, `Variables`, `Timer`, `Attribute`, `Locks`), bei modulübergreifender Nutzung in einer gemeinsamen Datei unter `/libs`.
+- **Eigene Instanz-Kacheln (HTML-SDK):** Details in `.claude-rules/kachel-html-sdk.md`. Diese Datei vor jeder Arbeit an einer eigenen HTML-Kachel lesen. Kurzfassung: Browser-„Zurück“ schließt eine maximierte HTML-Kachel nicht, weil die Kachel-Visualisierung die `src` des vorhandenen iframes neu setzt (Workaround am Anfang des Kachel-Skripts); Kachel selbst maximiert öffnen per `openObject(<InstanzID>)`; Scrollposition beim Neuzeichnen erhalten.
 - **Dokumentation (PHPDoc, READMEs, Screenshots, Changelog):** Details in `.claude-rules/readme-regeln.md`. Diese Datei vor jeder Arbeit an einer README, an Screenshots oder am Changelog lesen. Kurzfassung: PHPDoc für Klassen, Methoden und Variablen; jede für Nutzer sichtbare Änderung bekommt einen Changelog-Eintrag in der Haupt-README; Zielplattform der READMEs ist GitHub.
 - **Code-Qualität:**
   - Vermeide unnötige Abhängigkeiten und externe Bibliotheken, außer es ist zwingend notwendig.
