@@ -33,7 +33,7 @@ Danach schließt ein einziges „Zurück“ den Dialog. Geprüft in Chrome: Kach
 - Eine Kachel kann sich per `openObject(<eigene InstanzID>)` selbst maximiert öffnen (ab Symcon 8.2). Auslöser ist ein Ereignis der Instanz per `UpdateVisualizationValue`. Nur Clients, auf denen die Kachel gerade sichtbar ist, erhalten das Ereignis.
 - Die neu geöffnete, maximierte Kachel ist ein eigenes iframe. Sie erhält das Ereignis nicht, sondern nur die Daten aus `GetVisualizationTile()`. Was sie zeigen soll, gehört deshalb mit Zeitstempel in diese Daten. Sie übernimmt es nur, wenn es frisch ist (z. B. höchstens 15 s alt).
 - Schließen per `history.back()`, aber nur, wenn `window.top.location.hash` noch dem Stand beim Öffnen entspricht (der Nutzer hat nicht weiter navigiert).
-- Referenzumsetzung: FritzBox Anrufmonitor, `FritzBox Callmonitor/tile.js` und `FB_OpenCallPopup`.
+- Referenzumsetzung: FritzBox Anrufmonitor, `FritzBox Callmonitor/tile.js` (Eigenschaft `OpenTileOnRing`: Vollbild bei eingehendem Anruf, schließt sich wieder, sobald er nicht mehr klingelt). Das Ereignis erst nach den neuen Daten der Kachel senden (gleicher Ablauf, z. B. direkt nach `PushTile`), sonst findet die Kachel den Anruf noch nicht.
 
 ## Neuzeichnen ohne Springen
 
