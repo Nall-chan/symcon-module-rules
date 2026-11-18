@@ -47,3 +47,16 @@ Danach schließt ein einziges „Zurück“ den Dialog. Geprüft in Chrome: Kach
 ## Neuzeichnen ohne Springen
 
 Wird die Kachel bei neuen Daten per `innerHTML` neu aufgebaut, springen scrollbare Listen nach oben (z. B. nach jeder Bedienung). Vor dem Neuzeichnen `scrollTop`/`scrollLeft` der scrollbaren Bereiche merken und danach wiederherstellen, wenn Anzahl und Reihenfolge der Bereiche gleich geblieben sind. Referenzumsetzung: FritzBox, `libs/tile/tile.js` (`FB.draw`).
+
+## Übersetzung: nur beim ersten Laden automatisch
+
+Die Visu wendet `translateHTML()` nur einmal beim ersten Laden auf das ganze Dokument an: Jeder sichtbare Text, der als Schlüssel in der `locale.json` des Moduls steht, wird dabei übersetzt, auch Daten wie Werte oder Gerätenamen (z. B. `Up` → `Verbunden`, ein Gerät „Guest“ → „Gast“). Daten per `UpdateVisualizationValue` übersetzt sie nicht, denn sie weiß nicht, was gesendet wird. Zeichnet die Kachel sofort aus eingebetteten Daten, sieht die Anzeige nach dem ersten Update anders aus als beim Laden.
+
+Vorgehen:
+
+- `GetVisualizationTile` liefert die **Basis** (Gerüst, Stil, Skript). Daten dürfen eingebettet sein (JSON in einem `<script>`, dort übersetzt `translateHTML` nichts), werden in der Visu aber **nicht** sofort gezeichnet.
+- Ist `requestAction` vorhanden (Visu), fordert die Kachel beim Start die Daten an (`requestAction('TileReload', true)`), das Modul antwortet mit `UpdateVisualizationValue` (`PushTile`), und erst dann wird gezeichnet. So entsteht jede Anzeige auf demselben Weg. Neuzeichnen bei Größenwechsel erst danach.
+- Ohne Visu (z. B. `symcon_tile_preview`, kein `requestAction`) bzw. wenn nach 2 s keine Antwort kam, aus den eingebetteten Daten zeichnen.
+- Jedes Kachel-Modul muss die Aktion zum Nachladen beantworten, sonst erscheint eine Fehlermeldung über der Kachel.
+- Eigene Texte und formatierte Werte von Variablen in `handleMessage` bzw. beim Zeichnen selbst mit `translate()` übersetzen (Werte mit Darstellung sind schon übersetzt, `translate()` gibt sie unverändert zurück). Werte, die eine Übersetzung brauchen, bekommen am besten zusätzlich eine Darstellung.
+- Referenzumsetzung: FritzBox, `libs/tile/tile.js` (`firstDraw`, `FB.T`, `FB.vtext`) und `libs/FritzBoxTile.php` (`ProcessTileAction`, `PushTile`).
